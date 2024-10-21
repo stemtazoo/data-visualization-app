@@ -1,0 +1,26 @@
+{
+    "x_axis": "番号",
+    "y_axis": [
+        "CH1",
+        "CH2",
+        "CH3",
+        "CH4",
+        "CH5",
+        "CH6",
+        "CH7",
+        "CH8",
+        "CH9",
+        "CH10"
+    ],
+    "secondary_y_axis": [],
+    "use_secondary_y": false,
+    "graph_title": "温度推移",
+    "title_font_size": 20,
+    "x_axis_title": "番号",
+    "y_axis_title": "温度 (℃)",
+    "secondary_y_axis_title": "CH5",
+    "x_axis_title_font_size": 12,
+    "y_axis_title_font_size": 12,
+    "x_axis_value_size": 12,
+    "y_axis_value_size": 12
+}
