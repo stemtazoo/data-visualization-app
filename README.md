@@ -33,7 +33,7 @@ To install and run this application locally, follow these steps: / このアプ�
 ### Clone the Repository / リポジトリをクローン
 
 ```bash
-$ git clone https://github.com/stemtazoo/DataVisulalizationApp
+$ git clone https://github.com/stemtazoo/data-visualization-app
 $ cd data-visualization-app
 ```
 
@@ -119,6 +119,6 @@ If you have questions, feel free to reach out: / 質問がある場合は、お�
 
 You can download the project from GitHub at the following link: / プロジェクトは以下のリンクからGitHubでダウンロードできます：
 
-[Data Visualization App GitHub Repository](https://github.com/stemtazoo/DataVisulalizationApp)  
+[Data Visualization App GitHub Repository](https://github.com/stemtazoo/data-visualization-app)  
 
 
