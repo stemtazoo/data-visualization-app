@@ -3,26 +3,79 @@
         "title": "データ可視化アプリ",
         "df_origin": null,
         "customize_title": false,
-        "graph_title": "",
-        "title_font_size": 20,
-        "x_axis": "",
-        "y_axis": [],
-        "primary_y_axis": [],
-        "secondary_y_axis": [],
-        "use_secondary_y": false,
-        "secondary_y_axis_title": "",
-        "x_axis_title": "",
-        "y_axis_title": "",
-        "x_axis_title_font_size": 12,
-        "y_axis_title_font_size": 12,
-        "x_axis_value_size": 12,
-        "y_axis_value_size": 12,
         "data_type": "None",
         "tab_titles": ["データ可視化", "使い方", "設定値確認"],
         "colors": [
             "#0068c9", "#83c9ff", "#ff2b2b", "#ffabab",
             "#29b09d", "#7defa1", "#ff8700", "#ffd16a",
             "#6d3fc0", "#d5dae5"
-        ]
+        ],
+        "graph_settings": {
+            "line_chart": {
+                "graph_title": "",
+                "title_font_size": 20,
+                "x_axis": "",
+                "y_axis": [],
+                "primary_y_axis": [],
+                "secondary_y_axis": [],
+                "use_secondary_y": false,
+                "secondary_y_axis_title": "",
+                "x_axis_title": "",
+                "y_axis_title": "",
+                "x_axis_title_font_size": 12,
+                "y_axis_title_font_size": 12,
+                "x_axis_value_size": 12,
+                "y_axis_value_size": 12
+            },
+            "bar_chart": {
+                "graph_title": "",
+                "title_font_size": 20,
+                "x_axis": "",
+                "y_axis": [],
+                "x_axis_title": "",
+                "y_axis_title": "",
+                "x_axis_title_font_size": 12,
+                "y_axis_title_font_size": 12,
+                "x_axis_value_size": 12,
+                "y_axis_value_size": 12
+            },
+            "scatter_plot": {
+                "graph_title": "",
+                "title_font_size": 20,
+                "x_axis": "",
+                "y_axis": [],
+                "x_axis_title": "",
+                "y_axis_title": "",
+                "x_axis_title_font_size": 12,
+                "y_axis_title_font_size": 12,
+                "x_axis_value_size": 12,
+                "y_axis_value_size": 12
+            },
+            "heatmap": {
+                "graph_title": "",
+                "title_font_size": 20,
+                "x_axis": "",
+                "y_axis": [],
+                "z_axis": "",
+                "x_axis_title": "",
+                "y_axis_title": "",
+                "x_axis_title_font_size": 12,
+                "y_axis_title_font_size": 12,
+                "x_axis_value_size": 12,
+                "y_axis_value_size": 12
+            },
+            "histogram": {
+                "graph_title": "",
+                "title_font_size": 20,
+                "x_axis": "",
+                "x_axis_title": "",
+                "y_axis_title": "",
+                "x_axis_title_font_size": 12,
+                "y_axis_title_font_size": 12,
+                "x_axis_value_size": 12,
+                "y_axis_value_size": 12
+            }
+        }
     }
 }
+

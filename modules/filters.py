@@ -20,7 +20,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     modify = st.checkbox("Add filters")
 
     if not modify:
-        return df
+        return st.session_state.get('df_origin', None)
 
     df = df.copy()
 
@@ -99,4 +99,6 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 if user_text_input:
                     df = df[df[column].astype(str).str.contains(user_text_input)]
 
-    return df
+    st.session_state['df_origin'] = df
+    
+    return st.session_state.get('df_origin', None)
