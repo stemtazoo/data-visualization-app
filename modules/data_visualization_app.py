@@ -7,6 +7,7 @@ from modules.ui_components import file_uploader, graph_type_selector, add_settin
 from modules.filters import filter_dataframe
 from modules.plot import create_plot
 from modules.utils import download_chart_html
+from modules.data_processing import rotate_xy, calc_accel_metrics
 from modules.ui_customizer import customize_chart_settings
 from modules.help_content import render_help_tab
 
@@ -71,6 +72,43 @@ def app():
                     key="purpose_selectbox",
                 )
                 st.session_state["selected_purpose"] = selected_purpose
+
+                if selected_purpose == "加速度":
+                    accel_cols = st.columns(3)
+                    with accel_cols[0]:
+                        x_col = st.selectbox("x軸", df.columns, key="accel_x_col")
+                    with accel_cols[1]:
+                        y_col = st.selectbox("y軸", df.columns, key="accel_y_col")
+                    with accel_cols[2]:
+                        z_col = st.selectbox("z軸", df.columns, key="accel_z_col")
+
+                    angle = st.slider(
+                        "XY平面回転角度(CCW+)",
+                        min_value=-90.0,
+                        max_value=90.0,
+                        value=0.0,
+                        step=1.0,
+                        key="accel_angle",
+                    )
+
+                    rot_df = rotate_xy(df, x_col, y_col, angle)
+                    accel_df = pd.DataFrame(
+                        {
+                            "X": rot_df["x_rot"],
+                            "Y": rot_df["y_rot"],
+                            "Z": df[z_col].astype(float),
+                        }
+                    )
+
+                    with st.expander("変換後データ"):
+                        st.dataframe(accel_df)
+                        for axis_name in ["X", "Y", "Z"]:
+                            metrics = calc_accel_metrics(accel_df[axis_name])
+                            st.write(
+                                f"**{axis_name}軸** 実効値: {metrics['rms']:.5g}, \
+最大値: {metrics['max']:.5g}, 最小値: {metrics['min']:.5g}, \
+peak to peak: {metrics['p2p']:.5g}"
+                            )
             
             # グラフの種類を選択
             chart_type = graph_type_selector(st.session_state['data_type'])

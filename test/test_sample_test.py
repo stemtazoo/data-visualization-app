@@ -1,5 +1,10 @@
 # test/test_sample_data.py
 import unittest
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from modules.sample_data import load_simple_sample_data, load_timeseries_sample_data
 
 class TestSampleData(unittest.TestCase):
