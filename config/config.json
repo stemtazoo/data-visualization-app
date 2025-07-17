@@ -4,6 +4,8 @@
         "df_origin": null,
         "customize_title": false,
         "data_type": "None",
+        "specify_purpose": false,
+        "selected_purpose": "",
         "tab_titles": ["データ可視化", "使い方", "設定値確認"],
         "colors": [
             "#0068c9", "#83c9ff", "#ff2b2b", "#ffabab",

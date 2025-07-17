@@ -22,6 +22,9 @@ chart_type_mapping = {
     "ヒストグラム": "histogram"
 }
 
+# 目的選択肢のリスト（将来的に追加予定）
+purpose_options = ["加速度"]
+
 def app():
     # セッション状態にリセットフラグを追加し、存在しない場合はデフォルトでFalseを設定
     if 'reset_triggered' not in st.session_state:
@@ -51,6 +54,23 @@ def app():
             # see data
             with st.expander('See data!'):
                 st.dataframe(df)
+
+            # 目的を指定するトグル
+            specify_purpose = st.toggle(
+                "目的を指定する",
+                value=st.session_state.get("specify_purpose", False),
+                key="specify_purpose_toggle",
+            )
+            st.session_state["specify_purpose"] = specify_purpose
+
+            # 目的の選択
+            if specify_purpose:
+                selected_purpose = st.selectbox(
+                    "目的を選択",
+                    purpose_options,
+                    key="purpose_selectbox",
+                )
+                st.session_state["selected_purpose"] = selected_purpose
             
             # グラフの種類を選択
             chart_type = graph_type_selector(st.session_state['data_type'])
