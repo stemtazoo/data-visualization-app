@@ -93,7 +93,8 @@ def compute_fft(df: pd.DataFrame, start_sec: float, sample_size: int):
         return np.array([]), pd.DataFrame()
 
     data_values = segment.select_dtypes(include=[float, int]).values
-    fft_vals = np.fft.rfft(data_values, axis=0)
+    # サンプル数で正規化を行う。
+    fft_vals = np.fft.rfft(data_values, axis=0) / n
     freqs = np.fft.rfftfreq(n, d=interval)
     amplitude = np.abs(fft_vals)
     amp_df = pd.DataFrame(amplitude, columns=segment.select_dtypes(include=[float, int]).columns)

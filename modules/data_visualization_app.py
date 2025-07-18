@@ -30,6 +30,14 @@ def app():
     # セッション状態にリセットフラグを追加し、存在しない場合はデフォルトでFalseを設定
     if 'reset_triggered' not in st.session_state:
         st.session_state['reset_triggered'] = False
+    
+    # Initialize default FFT-related settings if they don't exist
+    if 'fft_toggle' not in st.session_state:
+        st.session_state['fft_toggle'] = False
+    if 'fft_sample_size' not in st.session_state:
+        st.session_state['fft_sample_size'] = 256
+    if 'fft_start_sec' not in st.session_state:
+        st.session_state['fft_start_sec'] = 0.0
 
     # 初期設定の読み込みと初期化
     if not st.session_state['reset_triggered']:
@@ -207,7 +215,7 @@ peak to peak: {metrics['p2p']:.5g}"
                     fft_toggle = st.toggle(
                         "FFTを実施", value=st.session_state.get("fft_toggle", False), key="fft_toggle"
                     )
-                    st.session_state["fft_toggle"] = fft_toggle
+
                     if fft_toggle:
                         sample_options = [2 ** i for i in range(6, 13)]
                         sample_size = st.select_slider(
