@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import streamlit as st
 
 def preprocess_data(df):
     # データの前処理をここに記述
@@ -106,5 +107,5 @@ def compute_fft(df: pd.DataFrame, start_sec: float, sample_size: int):
         amplitude[-1] = amplitude[-1] / 2
     
     amp_df = pd.DataFrame(amplitude, columns=segment.select_dtypes(include=[float, int]).columns)
-    return freqs, amp_df
+    return freqs, amp_df, interval
 

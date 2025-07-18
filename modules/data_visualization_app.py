@@ -245,10 +245,11 @@ peak to peak: {metrics['p2p']:.5g}"
                             )
                             st.session_state["fft_start_sec"] = start_sec
 
-                            freqs, amp_df = compute_fft(accel_df[[col for col in ["X", "Y", "Z", "Time"] if col in accel_df.columns]], start_sec, sample_size)
+                            freqs, amp_df, interval = compute_fft(accel_df[[col for col in ["X", "Y", "Z", "Time"] if col in accel_df.columns]], start_sec, sample_size)
                             if len(freqs) > 0:
                                 fft_fig = create_fft_plot(freqs, amp_df[[col for col in amp_df.columns if col != "Time"]])
                                 st.plotly_chart(fft_fig)
+                                st.write(f"Sampling interval inferred as {interval} seconds.")
 
             # ダウンロードリンクの提供
             st.download_button("Download CSV", data=st.session_state['df_origin'].to_csv(index=False), file_name='processed_data.csv')
