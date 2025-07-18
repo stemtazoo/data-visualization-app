@@ -98,3 +98,21 @@ def create_plot(chart_type, df, settings):
         return fig, settings['graph_title']
 
     return None, None
+
+
+def create_fft_plot(freqs, amp_df):
+    """Create a line plot of FFT results."""
+    colors = px.colors.qualitative.Light24
+    fig = go.Figure()
+    for i, col in enumerate(amp_df.columns):
+        fig.add_trace(
+            go.Scatter(x=freqs, y=amp_df[col], mode="lines", name=col, marker=dict(color=colors[i]))
+        )
+    fig.update_layout(
+        title={"text": "FFT結果", "x": 0.5, "xanchor": "center"},
+        xaxis_title="周波数(Hz)",
+        yaxis_title="加速度",
+        xaxis=dict(tickfont=dict(size=12)),
+        yaxis=dict(tickfont=dict(size=12)),
+    )
+    return fig
