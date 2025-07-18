@@ -289,7 +289,7 @@ peak to peak: {metrics['p2p']:.5g}"
             fig, graph_title = create_plot(chart_type, plot_df, st.session_state['graph_settings'][chart_key])
             if fig:
                 st.plotly_chart(fig)
-                download_chart_html(fig, graph_title)
+                download_chart_html(fig, 'グラフのダウンロード', key='download_chart_html')
 
                 if st.session_state.get("selected_purpose") == "加速度":
                     fft_toggle = st.toggle(
@@ -319,6 +319,7 @@ peak to peak: {metrics['p2p']:.5g}"
                                     if col != "Time":
                                         heatmap_fig = create_fft_heatmap(freqs, times, spec, col)
                                         st.plotly_chart(heatmap_fig)
+                                        download_chart_html(heatmap_fig, f"{col}_FFT_Heatmap", key=f'download_fft_heatmap_{col}')
                                         spec_df = pd.DataFrame(spec, index=freqs, columns=times)
                                         fft_results.append((col, spec_df))
                                 st.write(f"Sampling interval inferred as {interval} seconds.")
