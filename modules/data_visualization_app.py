@@ -314,11 +314,13 @@ peak to peak: {metrics['p2p']:.5g}"
                             )
                             fft_results = []
                             if len(freqs) > 0 and len(times) > 0:
+                                st.write("FFT結果:")
                                 for col, spec in spec_dict.items():
-                                    heatmap_fig = create_fft_heatmap(freqs, times, spec, col)
-                                    st.plotly_chart(heatmap_fig)
-                                    spec_df = pd.DataFrame(spec, index=freqs, columns=times)
-                                    fft_results.append((col, spec_df))
+                                    if col != "Time":
+                                        heatmap_fig = create_fft_heatmap(freqs, times, spec, col)
+                                        st.plotly_chart(heatmap_fig)
+                                        spec_df = pd.DataFrame(spec, index=freqs, columns=times)
+                                        fft_results.append((col, spec_df))
                                 st.write(f"Sampling interval inferred as {interval} seconds.")
                             st.session_state["fft_heatmap_results"] = fft_results
 
