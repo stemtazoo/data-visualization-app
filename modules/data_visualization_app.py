@@ -6,9 +6,15 @@ from modules.data_loader import load_data
 from modules.state_manager import initialize_session_state, merge_settings, load_user_settings, load_config
 from modules.ui_components import file_uploader, graph_type_selector, add_setting_buttons
 from modules.filters import filter_dataframe
-from modules.plot import create_plot, create_fft_heatmap
-from modules.utils import download_chart_html
-from modules.data_processing import rotate_xy, calc_accel_metrics, compute_fft_segments
+from modules.plot import create_plot, create_fft_heatmap, create_fft_plot
+from modules.utils import download_chart_html, show_dataframe
+from modules.data_processing import (
+    rotate_xy,
+    calc_accel_metrics,
+    compute_fft_segments,
+    compute_fft,
+    _infer_sampling_interval,
+)
 from modules.ui_customizer import customize_chart_settings
 from modules.help_content import render_help_tab
 
@@ -154,6 +160,51 @@ def app():
 最大値: {metrics['max']:.5g}, 最小値: {metrics['min']:.5g}, \
 peak to peak: {metrics['p2p']:.5g}"
                             )
+
+                    # Toggle to show FFT result at arbitrary start time
+                    fft_single_toggle = st.toggle(
+                        "任意の時間のFFT結果",
+                        value=st.session_state.get("fft_single_toggle", False),
+                        key="fft_single_toggle",
+                    )
+
+                    if fft_single_toggle:
+                        accel_df = st.session_state.get("accel_df")
+                        if accel_df is not None:
+                            interval = _infer_sampling_interval(accel_df)
+                            if "Time" in accel_df.columns:
+                                max_time = float(accel_df["Time"].iloc[-1])
+                            else:
+                                max_time = (len(accel_df) - 1) * interval
+
+                            start_sec = st.slider(
+                                "FFT開始時間(sec)",
+                                min_value=0.0,
+                                max_value=float(max_time),
+                                value=st.session_state.get("fft_start_sec", 0.0),
+                                step=float(interval),
+                                key="fft_start_sec_slider",
+                            )
+                            st.session_state["fft_start_sec"] = start_sec
+
+                            sample_options = [2 ** i for i in range(6, 13)]
+                            sample_size = st.select_slider(
+                                "計算するサンプリング数",
+                                options=sample_options,
+                                value=st.session_state.get("fft_sample_size", 256),
+                                key="fft_sample_size_slider_single",
+                            )
+                            st.session_state["fft_sample_size"] = sample_size
+
+                            freqs, amp_df, interval = compute_fft(
+                                accel_df[[col for col in ["X", "Y", "Z", "Time"] if col in accel_df.columns]],
+                                start_sec,
+                                sample_size,
+                            )
+                            if len(freqs) > 0:
+                                fft_fig = create_fft_plot(freqs, amp_df)
+                                st.plotly_chart(fft_fig)
+                                st.write(f"Sampling interval inferred as {interval} seconds.")
             
             # グラフの種類を選択
             chart_type = graph_type_selector(st.session_state['data_type'])
@@ -261,15 +312,28 @@ peak to peak: {metrics['p2p']:.5g}"
                                 accel_df[[col for col in ["X", "Y", "Z", "Time"] if col in accel_df.columns]],
                                 sample_size,
                             )
+                            fft_results = []
                             if len(freqs) > 0 and len(times) > 0:
                                 for col, spec in spec_dict.items():
                                     heatmap_fig = create_fft_heatmap(freqs, times, spec, col)
                                     st.plotly_chart(heatmap_fig)
+                                    spec_df = pd.DataFrame(spec, index=freqs, columns=times)
+                                    fft_results.append((col, spec_df))
                                 st.write(f"Sampling interval inferred as {interval} seconds.")
+                            st.session_state["fft_heatmap_results"] = fft_results
 
             # ダウンロードリンクの提供
-            st.download_button("Download CSV", data=st.session_state['df_origin'].to_csv(index=False), file_name='processed_data.csv')
-            
+            st.download_button(
+                "Download CSV",
+                data=st.session_state['df_origin'].to_csv(index=False),
+                file_name='processed_data.csv'
+            )
+
+            # Display FFT heatmap dataframes below the download button
+            if st.session_state.get("fft_heatmap_results"):
+                for col, df_heatmap in st.session_state["fft_heatmap_results"]:
+                    show_dataframe(df_heatmap, title=f"{col} FFT Heatmap Data")
+
             # 設定ボタンの追加
             add_setting_buttons(config, user_settings)
 
