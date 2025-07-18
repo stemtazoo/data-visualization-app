@@ -116,3 +116,18 @@ def create_fft_plot(freqs, amp_df):
         yaxis=dict(tickfont=dict(size=12)),
     )
     return fig
+
+
+def create_fft_heatmap(freqs, times, amp_matrix, axis_label=""):
+    """Create a heatmap showing FFT amplitude over time."""
+    heatmap = go.Heatmap(z=amp_matrix, x=times, y=freqs, colorscale="Viridis")
+    title = "FFTヒートマップ" if axis_label == "" else f"{axis_label} FFTヒートマップ"
+    layout = go.Layout(
+        title={"text": title, "x": 0.5, "xanchor": "center"},
+        xaxis_title="時間(sec)",
+        yaxis_title="周波数(Hz)",
+        xaxis=dict(tickfont=dict(size=12)),
+        yaxis=dict(tickfont=dict(size=12)),
+    )
+    fig = go.Figure(data=[heatmap], layout=layout)
+    return fig
