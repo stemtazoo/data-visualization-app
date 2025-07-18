@@ -5,9 +5,9 @@ from modules.data_loader import load_data
 from modules.state_manager import initialize_session_state, merge_settings, load_user_settings, load_config
 from modules.ui_components import file_uploader, graph_type_selector, add_setting_buttons
 from modules.filters import filter_dataframe
-from modules.plot import create_plot
+from modules.plot import create_plot, create_fft_plot
 from modules.utils import download_chart_html
-from modules.data_processing import rotate_xy, calc_accel_metrics
+from modules.data_processing import rotate_xy, calc_accel_metrics, compute_fft
 from modules.ui_customizer import customize_chart_settings
 from modules.help_content import render_help_tab
 
@@ -92,6 +92,12 @@ def app():
                     )
 
                     rot_df = rotate_xy(df, x_col, y_col, angle)
+                    time_series = None
+                    for t_col in ["経過時間(sec)", "time(sec)"]:
+                        if t_col in df.columns:
+                            time_series = df[t_col].astype(float)
+                            break
+
                     accel_df = pd.DataFrame(
                         {
                             "X": rot_df["x_rot"],
@@ -99,6 +105,10 @@ def app():
                             "Z": df[z_col].astype(float),
                         }
                     )
+                    if time_series is not None:
+                        accel_df["Time"] = time_series
+
+                    st.session_state["accel_df"] = accel_df
 
                     with st.expander("変換後データ"):
                         st.dataframe(accel_df)
@@ -192,6 +202,45 @@ peak to peak: {metrics['p2p']:.5g}"
             if fig:
                 st.plotly_chart(fig)
                 download_chart_html(fig, graph_title)
+
+                if st.session_state.get("selected_purpose") == "加速度":
+                    fft_toggle = st.toggle(
+                        "FFTを実施", value=st.session_state.get("fft_toggle", False), key="fft_toggle"
+                    )
+                    st.session_state["fft_toggle"] = fft_toggle
+                    if fft_toggle:
+                        sample_options = [2 ** i for i in range(6, 13)]
+                        sample_size = st.select_slider(
+                            "計算するサンプリング数",
+                            options=sample_options,
+                            value=st.session_state.get("fft_sample_size", 256),
+                            key="fft_sample_size_slider",
+                        )
+                        st.session_state["fft_sample_size"] = sample_size
+
+                        accel_df = st.session_state.get("accel_df")
+                        if accel_df is not None:
+                            interval = 1.0
+                            for c in ["Time", "経過時間(sec)", "time(sec)"]:
+                                if c in accel_df.columns and len(accel_df[c]) > 1:
+                                    interval = float(accel_df[c].iloc[1]) - float(accel_df[c].iloc[0])
+                                    break
+
+                            max_start = max(0.0, (len(accel_df) - sample_size) * interval)
+                            start_sec = st.slider(
+                                "FFT開始位置(秒)",
+                                min_value=0.0,
+                                max_value=float(max_start),
+                                value=st.session_state.get("fft_start_sec", 0.0),
+                                step=interval,
+                                key="fft_start_sec_slider",
+                            )
+                            st.session_state["fft_start_sec"] = start_sec
+
+                            freqs, amp_df = compute_fft(accel_df[[col for col in ["X", "Y", "Z", "Time"] if col in accel_df.columns]], start_sec, sample_size)
+                            if len(freqs) > 0:
+                                fft_fig = create_fft_plot(freqs, amp_df[[col for col in amp_df.columns if col != "Time"]])
+                                st.plotly_chart(fft_fig)
 
             # ダウンロードリンクの提供
             st.download_button("Download CSV", data=st.session_state['df_origin'].to_csv(index=False), file_name='processed_data.csv')

@@ -49,3 +49,53 @@ def calc_accel_metrics(series: pd.Series) -> dict:
         "p2p": p2p,
     }
 
+
+def _infer_sampling_interval(df: pd.DataFrame) -> float:
+    """Infer sampling interval from known time columns."""
+    for col in ["Time", "経過時間(sec)", "time(sec)"]:
+        if col in df.columns and len(df[col]) > 1:
+            try:
+                return float(df[col].iloc[1]) - float(df[col].iloc[0])
+            except Exception:
+                continue
+    return 1.0
+
+
+def compute_fft(df: pd.DataFrame, start_sec: float, sample_size: int):
+    """Compute FFT for acceleration dataframe.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing at least acceleration columns (e.g. ``X``, ``Y``, ``Z``)
+        and optionally a time column.
+    start_sec : float
+        Start time in seconds for FFT calculation.
+    sample_size : int
+        Number of samples to use for FFT. Should be a power of two.
+
+    Returns
+    -------
+    tuple
+        ``(freqs, amp_df)`` where ``freqs`` is a numpy array of frequency bins and
+        ``amp_df`` is a DataFrame containing amplitude spectra for each column.
+    """
+
+    interval = _infer_sampling_interval(df)
+    start_index = int(start_sec / interval)
+    end_index = start_index + sample_size
+    if end_index > len(df):
+        end_index = len(df)
+        start_index = max(0, end_index - sample_size)
+    segment = df.iloc[start_index:end_index]
+    n = len(segment)
+    if n == 0:
+        return np.array([]), pd.DataFrame()
+
+    data_values = segment.select_dtypes(include=[float, int]).values
+    fft_vals = np.fft.rfft(data_values, axis=0)
+    freqs = np.fft.rfftfreq(n, d=interval)
+    amplitude = np.abs(fft_vals)
+    amp_df = pd.DataFrame(amplitude, columns=segment.select_dtypes(include=[float, int]).columns)
+    return freqs, amp_df
+
