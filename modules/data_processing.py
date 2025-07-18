@@ -94,9 +94,17 @@ def compute_fft(df: pd.DataFrame, start_sec: float, sample_size: int):
 
     data_values = segment.select_dtypes(include=[float, int]).values
     # サンプル数で正規化を行う。
-    fft_vals = np.fft.rfft(data_values, axis=0) / n
+    fft_vals = np.fft.rfft(data_values, axis=0)
     freqs = np.fft.rfftfreq(n, d=interval)
-    amplitude = np.abs(fft_vals)
+    
+    # 振幅スペクトルの計算
+    amplitude = np.abs(fft_vals) * 2 / n  # 2/n で正規化
+    amplitude[0] = amplitude[0] / 2       # DC成分は元に戻す
+    
+    # ナイキスト成分の処理（サンプル数が偶数の場合）
+    if n % 2 == 0:
+        amplitude[-1] = amplitude[-1] / 2
+    
     amp_df = pd.DataFrame(amplitude, columns=segment.select_dtypes(include=[float, int]).columns)
     return freqs, amp_df
 
