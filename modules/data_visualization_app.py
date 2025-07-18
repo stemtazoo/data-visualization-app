@@ -1,13 +1,14 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 from modules.data_loader import load_data
 from modules.state_manager import initialize_session_state, merge_settings, load_user_settings, load_config
 from modules.ui_components import file_uploader, graph_type_selector, add_setting_buttons
 from modules.filters import filter_dataframe
-from modules.plot import create_plot, create_fft_plot
+from modules.plot import create_plot, create_fft_heatmap
 from modules.utils import download_chart_html
-from modules.data_processing import rotate_xy, calc_accel_metrics, compute_fft
+from modules.data_processing import rotate_xy, calc_accel_metrics, compute_fft_segments
 from modules.ui_customizer import customize_chart_settings
 from modules.help_content import render_help_tab
 
@@ -83,12 +84,13 @@ def app():
 
                 if selected_purpose == "加速度":
                     accel_cols = st.columns(3)
+                    axis_options = ["使用しない"] + df.columns.to_list()
                     with accel_cols[0]:
-                        x_col = st.selectbox("x軸", df.columns, key="accel_x_col")
+                        x_col = st.selectbox("x軸", axis_options, key="accel_x_col")
                     with accel_cols[1]:
-                        y_col = st.selectbox("y軸", df.columns, key="accel_y_col")
+                        y_col = st.selectbox("y軸", axis_options, key="accel_y_col")
                     with accel_cols[2]:
-                        z_col = st.selectbox("z軸", df.columns, key="accel_z_col")
+                        z_col = st.selectbox("z軸", axis_options, key="accel_z_col")
 
                     angle = st.slider(
                         "XY平面回転角度(CCW+)",
@@ -99,28 +101,53 @@ def app():
                         key="accel_angle",
                     )
 
-                    rot_df = rotate_xy(df, x_col, y_col, angle)
-                    time_series = None
-                    for t_col in ["経過時間(sec)", "time(sec)"]:
-                        if t_col in df.columns:
-                            time_series = df[t_col].astype(float)
-                            break
+                    time_option = ["使用しない"] + df.columns.to_list()
+                    time_col = st.selectbox("時間軸", time_option, key="accel_time_col")
+                    if time_col != "使用しない":
+                        unit = st.selectbox("時間軸の単位", ["sec", "ms", "us"], key="accel_time_unit")
+                    else:
+                        unit = "sec"
+                    if time_col == "使用しない":
+                        interval = st.number_input(
+                            "サンプリング間隔(sec)",
+                            min_value=0.0,
+                            value=st.session_state.get("accel_interval", 1.0),
+                            key="accel_interval_input",
+                        )
+                        st.session_state["accel_interval"] = interval
+                        time_series = np.arange(len(df)) * interval
+                    else:
+                        time_series = df[time_col].astype(float)
+                        if unit == "ms":
+                            time_series = time_series / 1000.0
+                        elif unit == "us":
+                            time_series = time_series / 1_000_000.0
 
-                    accel_df = pd.DataFrame(
-                        {
-                            "X": rot_df["x_rot"],
-                            "Y": rot_df["y_rot"],
-                            "Z": df[z_col].astype(float),
-                        }
-                    )
-                    if time_series is not None:
-                        accel_df["Time"] = time_series
+                    accel_data = {}
+                    if x_col != "使用しない":
+                        accel_data["X_raw"] = df[x_col].astype(float)
+                    if y_col != "使用しない":
+                        accel_data["Y_raw"] = df[y_col].astype(float)
+                    if x_col != "使用しない" and y_col != "使用しない":
+                        rot_df = rotate_xy(df, x_col, y_col, angle)
+                        accel_data["X"] = rot_df["x_rot"]
+                        accel_data["Y"] = rot_df["y_rot"]
+                    else:
+                        if x_col != "使用しない":
+                            accel_data["X"] = accel_data["X_raw"]
+                        if y_col != "使用しない":
+                            accel_data["Y"] = accel_data["Y_raw"]
+                    if z_col != "使用しない":
+                        accel_data["Z"] = df[z_col].astype(float)
+
+                    accel_data["Time"] = time_series
+                    accel_df = pd.DataFrame(accel_data)
 
                     st.session_state["accel_df"] = accel_df
 
                     with st.expander("変換後データ"):
                         st.dataframe(accel_df)
-                        for axis_name in ["X", "Y", "Z"]:
+                        for axis_name in [c for c in ["X", "Y", "Z"] if c in accel_df.columns]:
                             metrics = calc_accel_metrics(accel_df[axis_name])
                             st.write(
                                 f"**{axis_name}軸** 実効値: {metrics['rms']:.5g}, \
@@ -134,27 +161,29 @@ peak to peak: {metrics['p2p']:.5g}"
             # グラフ設定の読み込み
             chart_key = chart_type_mapping.get(chart_type, "default_settings")
 
+            plot_df = st.session_state.get("accel_df") if st.session_state.get("selected_purpose") == "加速度" else st.session_state['df_origin']
+
             # X軸の選択
             if chart_type == 'ヒートマップ':
                 x_axis = st.selectbox("X軸を選択", ['column'], key="x_axis_selectbox")
             else:
-                x_axis = st.selectbox("X軸を選択", st.session_state['df_origin'].columns, key="x_axis_selectbox")
+                x_axis = st.selectbox("X軸を選択", plot_df.columns, key="x_axis_selectbox")
             
             st.session_state['graph_settings'][chart_key]['x_axis'] = x_axis
 
             # Y軸の選択
             y_axis = []
             if st.session_state['data_type'] == 'GRAPHTEC':
-                y_axis = st.multiselect("Y軸を選択", st.session_state['df_origin'].columns, st.session_state['df_origin'].columns.to_list()[3:-3], key="y_axis_selectbox")
+                y_axis = st.multiselect("Y軸を選択", plot_df.columns, plot_df.columns.to_list()[3:-3], key="y_axis_selectbox")
             elif st.session_state['data_type'] == 'NR600':
-                y_axis = st.multiselect("Y軸を選択", st.session_state['df_origin'].columns, st.session_state['df_origin'].columns.to_list()[1:], key="y_axis_selectbox")
+                y_axis = st.multiselect("Y軸を選択", plot_df.columns, plot_df.columns.to_list()[1:], key="y_axis_selectbox")
             elif chart_type == 'ヒートマップ':
-                y_axis_list = ['dataframe index', st.session_state['df_origin'].columns[0]]
+                y_axis_list = ['dataframe index', plot_df.columns[0]]
                 y_axis = st.selectbox("Y軸を選択", y_axis_list, key="y_axis_selectbox")
                 if y_axis != 'dataframe index':
-                    st.session_state['df_origin'] = st.session_state['df_origin'].set_index(y_axis)
+                    plot_df = plot_df.set_index(y_axis)
             else:
-                y_axis = st.multiselect("Y軸を選択", st.session_state['df_origin'].columns, key="y_axis_selectbox")
+                y_axis = st.multiselect("Y軸を選択", plot_df.columns, key="y_axis_selectbox")
             
             st.session_state['graph_settings'][chart_key]['y_axis'] = y_axis
 
@@ -206,7 +235,7 @@ peak to peak: {metrics['p2p']:.5g}"
                         st.session_state['graph_settings'][chart_key]['y_axis_title'] = ", ".join(st.session_state['graph_settings'][chart_key]['y_axis'])
 
             # グラフの作成と表示
-            fig, graph_title = create_plot(chart_type, st.session_state['df_origin'], st.session_state['graph_settings'][chart_key])
+            fig, graph_title = create_plot(chart_type, plot_df, st.session_state['graph_settings'][chart_key])
             if fig:
                 st.plotly_chart(fig)
                 download_chart_html(fig, graph_title)
@@ -228,27 +257,14 @@ peak to peak: {metrics['p2p']:.5g}"
 
                         accel_df = st.session_state.get("accel_df")
                         if accel_df is not None:
-                            interval = 1.0
-                            for c in ["Time", "経過時間(sec)", "time(sec)"]:
-                                if c in accel_df.columns and len(accel_df[c]) > 1:
-                                    interval = float(accel_df[c].iloc[1]) - float(accel_df[c].iloc[0])
-                                    break
-
-                            max_start = max(0.0, (len(accel_df) - sample_size) * interval)
-                            start_sec = st.slider(
-                                "FFT開始位置(秒)",
-                                min_value=0.0,
-                                max_value=float(max_start),
-                                value=st.session_state.get("fft_start_sec", 0.0),
-                                step=interval,
-                                key="fft_start_sec_slider",
+                            freqs, times, spec_dict, interval = compute_fft_segments(
+                                accel_df[[col for col in ["X", "Y", "Z", "Time"] if col in accel_df.columns]],
+                                sample_size,
                             )
-                            st.session_state["fft_start_sec"] = start_sec
-
-                            freqs, amp_df, interval = compute_fft(accel_df[[col for col in ["X", "Y", "Z", "Time"] if col in accel_df.columns]], start_sec, sample_size)
-                            if len(freqs) > 0:
-                                fft_fig = create_fft_plot(freqs, amp_df[[col for col in amp_df.columns if col != "Time"]])
-                                st.plotly_chart(fft_fig)
+                            if len(freqs) > 0 and len(times) > 0:
+                                for col, spec in spec_dict.items():
+                                    heatmap_fig = create_fft_heatmap(freqs, times, spec, col)
+                                    st.plotly_chart(heatmap_fig)
                                 st.write(f"Sampling interval inferred as {interval} seconds.")
 
             # ダウンロードリンクの提供

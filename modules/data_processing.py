@@ -109,3 +109,48 @@ def compute_fft(df: pd.DataFrame, start_sec: float, sample_size: int):
     amp_df = pd.DataFrame(amplitude, columns=segment.select_dtypes(include=[float, int]).columns)
     return freqs, amp_df, interval
 
+
+def compute_fft_segments(df: pd.DataFrame, sample_size: int):
+    """Compute FFT repeatedly over segments of ``sample_size``.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing numeric columns to transform. A ``Time`` column is
+        optional for inferring the sampling interval.
+    sample_size : int
+        Number of samples per FFT segment.
+
+    Returns
+    -------
+    tuple
+        ``(freqs, times, spec_dict, interval)`` where ``freqs`` is an array of
+        frequency bins, ``times`` is an array of segment start times, and
+        ``spec_dict`` maps column names to 2-D amplitude arrays of shape
+        ``(len(freqs), len(times))``.
+    """
+
+    interval = _infer_sampling_interval(df)
+    n_segments = len(df) // sample_size
+    if n_segments == 0:
+        return np.array([]), np.array([]), {}, interval
+
+    freqs = np.fft.rfftfreq(sample_size, d=interval)
+    times = np.arange(n_segments) * sample_size * interval
+
+    spec_dict = {}
+    numeric_cols = df.select_dtypes(include=[float, int]).columns
+    for col in numeric_cols:
+        spectra = []
+        for i in range(n_segments):
+            seg = df[col].iloc[i * sample_size : (i + 1) * sample_size].astype(float).values
+            fft_vals = np.fft.rfft(seg)
+            amplitude = np.abs(fft_vals) * 2 / sample_size
+            amplitude[0] /= 2
+            if sample_size % 2 == 0:
+                amplitude[-1] /= 2
+            spectra.append(amplitude)
+        spec_dict[col] = np.column_stack(spectra)
+
+    return freqs, times, spec_dict, interval
+
